@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { PlayerView } from "@/lib/types";
-import { cardDisplayName, parseCardType, parseCardValue, stagDiscardCost } from "@/lib/cards";
+import { cardDisplayName, parseCardType, parseCardValue, stagDiscardCost, stagAtonementCost } from "@/lib/cards";
 import { CardChip } from "@/components/CardChip";
 
 export function KingdomActionPanel({
@@ -225,34 +225,47 @@ export function HuntResponsePanel({
   const [selectedHealing, setSelectedHealing] = useState<string | null>(null);
   const [useMagi, setUseMagi] = useState(false);
 
-  // Calculate if selection would avert
+  // Territory healing bonus (applies to all Healing cards)
+  const myInfo = view.players.find((p) => p.isMe)!;
+  const healInTerritory = myInfo.territory.filter((c) => parseCardType(c) === "healing").length;
+  const magiAsHealing = myInfo.territoryMagiAsHealing.length;
+  const territoryBonus = healInTerritory + magiAsHealing;
+
+  // Calculate selected card's total
   let healingTotal = 0;
   if (selectedHealing) {
-    const myInfo = view.players.find((p) => p.isMe)!;
-    const healInTerritory = myInfo.territory.filter((c) => parseCardType(c) === "healing").length;
-    const magiAsHealing = myInfo.territoryMagiAsHealing.length;
-    healingTotal = parseCardValue(selectedHealing) + healInTerritory + magiAsHealing + (useMagi ? 6 : 0);
+    healingTotal = parseCardValue(selectedHealing) + territoryBonus + (useMagi ? 6 : 0);
   }
 
   return (
     <div>
       <p className="text-sm text-stone-300 mb-2">
-        Hunt incoming! (value: {huntVal}) — Avert or accept?
+        Hunt incoming! <span className="text-red-400 font-semibold">(value {huntVal})</span> — Avert or accept?
+        {territoryBonus > 0 && <span className="text-stone-500 text-xs ml-1">(your Healing bonus: +{territoryBonus})</span>}
       </p>
       <div className="space-y-2">
         {healings.length > 0 && (
           <div>
             <p className="text-xs text-stone-400 mb-1">Select Healing card to avert:</p>
-            <div className="flex gap-1 flex-wrap">
-              {healings.map((h) => (
-                <button
-                  key={h}
-                  onClick={() => setSelectedHealing(selectedHealing === h ? null : h)}
-                  className={`rounded ${selectedHealing === h ? "ring-2 ring-amber-400" : ""}`}
-                >
-                  <CardChip cardId={h} interactive />
-                </button>
-              ))}
+            <div className="flex gap-1.5 flex-wrap">
+              {healings.map((h) => {
+                const base = parseCardValue(h);
+                const total = base + territoryBonus;
+                const canAvert = total >= huntVal;
+                const canAvertWithMagi = total + 6 >= huntVal;
+                return (
+                  <button
+                    key={h}
+                    onClick={() => setSelectedHealing(selectedHealing === h ? null : h)}
+                    className={`rounded flex items-center gap-1 ${selectedHealing === h ? "ring-2 ring-amber-400" : ""}`}
+                  >
+                    <CardChip cardId={h} interactive />
+                    <span className={`text-[10px] font-medium ${canAvert ? "text-green-400" : canAvertWithMagi ? "text-amber-400" : "text-stone-600"}`}>
+                      ={total}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
             {selectedHealing && magis.length > 0 && (
               <label className="flex items-center gap-2 mt-1 text-sm text-stone-300">
@@ -262,16 +275,16 @@ export function HuntResponsePanel({
                   onChange={(e) => setUseMagi(e.target.checked)}
                   className="rounded"
                 />
-                Add Magi (+6)
+                Add Magi (+6) → total {parseCardValue(selectedHealing) + territoryBonus + 6}
               </label>
             )}
             {selectedHealing && (
               <p className="text-xs mt-1 text-stone-400">
-                Your healing total: {healingTotal} vs hunt: {huntVal} —{" "}
+                Healing {parseCardValue(selectedHealing)}{territoryBonus > 0 ? ` + ${territoryBonus} territory` : ""}{useMagi ? " + 6 Magi" : ""} = <span className="font-semibold text-stone-200">{healingTotal}</span>{" "}vs Hunt <span className="font-semibold text-stone-200">{huntVal}</span>{" — "}
                 {healingTotal >= huntVal ? (
-                  <span className="text-green-400">Will avert!</span>
+                  <span className="text-green-400 font-semibold">Will avert!</span>
                 ) : (
-                  <span className="text-red-400">Not enough</span>
+                  <span className="text-red-400 font-semibold">Not enough</span>
                 )}
               </p>
             )}
@@ -327,11 +340,35 @@ export function DiscardPanel({
   actionName: string;
   reason: string;
 }) {
+  // Atonement warnings for selected Stags
+  const stagWarnings = selectedCards
+    .filter((c) => parseCardType(c) === "stag")
+    .map((c) => {
+      const val = parseCardValue(c);
+      const myInfo = view.players.find((p) => p.isMe)!;
+      const healCount = myInfo.territory.filter((t) => parseCardType(t) === "healing").length;
+      const magiHealCount = myInfo.territoryMagiAsHealing.length;
+      const totalHeal = healCount + magiHealCount;
+      if (totalHeal >= val) {
+        return { card: cardDisplayName(c), text: "covered by Healing", warn: false };
+      }
+      return { card: cardDisplayName(c), text: `atone ${stagAtonementCost(val)}`, warn: true };
+    });
+
   return (
     <div>
       <p className="text-sm text-stone-300 mb-2">
         {reason}: Select {count} card{count !== 1 ? "s" : ""} to discard ({selectedCards.length}/{count}):
       </p>
+      {stagWarnings.length > 0 && (
+        <div className="text-xs mb-2 space-y-0.5">
+          {stagWarnings.map((w, i) => (
+            <p key={i} className={w.warn ? "text-amber-400" : "text-green-500"}>
+              ⚠ {w.card}: {w.text}
+            </p>
+          ))}
+        </div>
+      )}
       <div className="flex gap-2 items-center flex-wrap">
         <button
           onClick={() => {

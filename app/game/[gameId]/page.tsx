@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useGame } from "@/lib/useGame";
 import { PlayerView } from "@/lib/types";
-import { parseCardType } from "@/lib/cards";
+import { parseCardType, parseCardValue } from "@/lib/cards";
 import { CardChip } from "@/components/CardChip";
+import { PublicPlayerInfo } from "@/lib/types";
 import {
   KingdomActionPanel,
   TerritoryActionPanel,
@@ -267,41 +268,28 @@ function GameBoard({
       <section className="mb-3 space-y-1.5">
         <h2 className="text-xs text-stone-500 uppercase tracking-wide">Players</h2>
         {view.players.map((p) => (
-          <div
+          <PlayerPanel
             key={p.seatIndex}
-            className={`px-3 py-2 rounded text-sm ${
-              p.isMe
-                ? "bg-amber-900/20 border border-amber-900/50"
-                : p.seatIndex === view.currentPlayerSeat && !isFinished
-                ? "bg-stone-800 border border-stone-600"
-                : "bg-stone-800/40"
-            } ${p.eliminated ? "opacity-50" : ""}`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-medium">
-                {p.name}
-                {p.isMe && <span className="text-amber-400 text-xs ml-1">(you)</span>}
-                {p.eliminated && <span className="text-red-400 text-xs ml-1">✗ eliminated</span>}
-              </span>
-              <span className="text-stone-500 text-xs">
-                Hand: {p.handCount} · Coins: {p.contributionsRemaining}/{p.contributionsRemaining + p.contributionsMade}
-              </span>
-            </div>
-            {p.territory.length > 0 && (
-              <div className="flex gap-1 flex-wrap mt-1">
-                {p.territory.map((cardId, i) => (
-                  <CardChip key={`${cardId}-${i}`} cardId={cardId} small />
-                ))}
-              </div>
-            )}
-          </div>
+            player={p}
+            isCurrentTurn={p.seatIndex === view.currentPlayerSeat && !isFinished}
+          />
         ))}
       </section>
 
       {/* My Hand */}
       <section className="mb-3">
         <h2 className="text-xs text-stone-500 mb-1 uppercase tracking-wide">
-          Your Hand ({view.myHand.length}/{view.myHandLimit})
+          Your Hand{" "}
+          <span className={
+            view.myHand.length > view.myHandLimit
+              ? "text-red-400 font-semibold"
+              : view.myHand.length === view.myHandLimit
+              ? "text-amber-500"
+              : "text-stone-500"
+          }>
+            ({view.myHand.length}/{view.myHandLimit})
+            {view.myHand.length > view.myHandLimit && " ⚠ over limit"}
+          </span>
         </h2>
         <div className="flex gap-2 flex-wrap">
           {view.myHand.length > 0 ? (
@@ -341,5 +329,105 @@ function GameBoard({
         </div>
       </section>
     </main>
+  );
+}
+
+// ============================================================
+// Player Panel with summarized territory
+// ============================================================
+
+function territoryStats(territory: string[], magiAsHealing: string[]) {
+  let stagPoints = 0, stagCount = 0, hunts = 0, healings = 0, magis = 0, tithes = 0, kc = 0;
+  const magiHealSet = new Set(magiAsHealing);
+  for (const c of territory) {
+    const t = parseCardType(c);
+    if (t === "stag") { stagCount++; stagPoints += parseCardValue(c); }
+    else if (t === "hunt") hunts++;
+    else if (t === "healing") healings++;
+    else if (t === "magi") { if (magiHealSet.has(c)) healings++; else magis++; }
+    else if (t === "tithe") tithes++;
+    else if (t === "kingscommand") kc++;
+  }
+  return { stagPoints, stagCount, hunts, healings, magis, tithes, kc };
+}
+
+function PlayerPanel({
+  player,
+  isCurrentTurn,
+}: {
+  player: PublicPlayerInfo;
+  isCurrentTurn: boolean;
+}) {
+  const ts = territoryStats(player.territory, player.territoryMagiAsHealing);
+
+  return (
+    <div
+      className={`px-3 py-2 rounded text-sm ${
+        player.isMe
+          ? "bg-amber-900/20 border border-amber-900/50"
+          : isCurrentTurn
+          ? "bg-stone-800 border border-stone-600"
+          : "bg-stone-800/40"
+      } ${player.eliminated ? "opacity-50" : ""}`}
+    >
+      {/* Top row: name + key stats */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {isCurrentTurn && (
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
+          )}
+          <span className="font-medium truncate">
+            {player.name}
+          </span>
+          {player.isMe && <span className="text-amber-400 text-xs">(you)</span>}
+          {player.eliminated && <span className="text-red-400 text-xs">✗ out</span>}
+        </div>
+        <div className="flex items-center gap-2.5 text-xs flex-shrink-0">
+          <span className={`font-semibold ${ts.stagPoints >= 15 ? "text-emerald-400" : ts.stagPoints >= 10 ? "text-emerald-500" : "text-stone-400"}`}>
+            ♠{ts.stagPoints}/18
+          </span>
+          <span className="text-stone-500">✋{player.handCount}</span>
+          <span className="text-stone-500" title={`${player.contributionsMade} spent`}>
+            🪙{player.contributionsRemaining}
+          </span>
+        </div>
+      </div>
+
+      {/* Territory summary line */}
+      {player.territory.length > 0 && (
+        <div className="flex gap-2.5 mt-1 text-xs flex-wrap">
+          {ts.stagCount > 0 && (
+            <span className="text-emerald-400" title={`${ts.stagCount} Stags, ${ts.stagPoints} points`}>
+              ♠{ts.stagCount} Stag{ts.stagCount > 1 ? "s" : ""}
+            </span>
+          )}
+          {ts.hunts > 0 && (
+            <span className="text-red-400" title={`${ts.hunts} Hunts in territory; your Hunts get +${ts.hunts * 3} value`}>
+              ♣+{ts.hunts * 3} Hunt
+            </span>
+          )}
+          {ts.healings > 0 && (
+            <span className="text-sky-400" title={`${ts.healings} Healing bonus; your Healing cards get +${ts.healings} value`}>
+              ♥+{ts.healings} Heal
+            </span>
+          )}
+          {ts.magis > 0 && (
+            <span className="text-violet-400" title={`${ts.magis} Magi; hand size +${ts.magis}`}>
+              ✦+{ts.magis} Hand
+            </span>
+          )}
+          {ts.tithes > 0 && (
+            <span className="text-amber-400" title={`${ts.tithes} Tithes; worth +${ts.tithes * 3} on deck-out`}>
+              ◆{ts.tithes} Tithe{ts.tithes > 1 ? "s" : ""}
+            </span>
+          )}
+          {ts.kc > 0 && (
+            <span className="text-orange-400" title={`${ts.kc} King's Commands; Hunts discard/draw +${ts.kc}`}>
+              ♚+{ts.kc} KC
+            </span>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

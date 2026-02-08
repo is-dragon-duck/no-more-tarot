@@ -209,7 +209,7 @@ export function triggerDeckExhaustion(state: GameState) {
   for (const p of state.players) {
     if (p.eliminated) continue;
 
-    let stagPoints = 0;
+    let stagCount = 0;
     let tithesInTerritory = 0;
     let magiCount = 0;
     let healingCount = 0;
@@ -218,7 +218,7 @@ export function triggerDeckExhaustion(state: GameState) {
 
     for (const cardId of p.territory) {
       const type = parseCardType(cardId);
-      if (type === "stag") stagPoints += parseInt(cardId.split("-")[1], 10);
+      if (type === "stag") stagCount++;
       else if (type === "tithe") tithesInTerritory++;
       else if (type === "magi") magiCount++;
       else if (type === "healing") healingCount++;
@@ -226,9 +226,9 @@ export function triggerDeckExhaustion(state: GameState) {
       else if (type === "kingscommand") kcCount++;
     }
 
-    const score = stagPoints + (3 * tithesInTerritory) + p.contributionsMade;
+    const score = stagCount + (3 * tithesInTerritory) + p.contributionsMade;
     scores.push({ player: p, score, tiebreak: [magiCount, healingCount, huntCount, kcCount] });
-    log(state, `${p.name}: ${stagPoints} Stag + ${3 * tithesInTerritory} Tithe(${tithesInTerritory}×3) + ${p.contributionsMade} contributions = ${score}`);
+    log(state, `${p.name}: ${stagCount} Stags + ${3 * tithesInTerritory} Tithe(${tithesInTerritory}×3) + ${p.contributionsMade} contributions = ${score}`);
   }
 
   scores.sort((a, b) => {

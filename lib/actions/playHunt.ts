@@ -36,10 +36,12 @@ export function handlePlayHunt(
     return "Card not in your hand";
   }
 
-  // 1. Burn a card
-  if (!burnCard(state)) {
-    triggerDeckExhaustion(state);
-    return null;
+  // 1. Burn 3 cards
+  for (let i = 0; i < 3; i++) {
+    if (!burnCard(state)) {
+      triggerDeckExhaustion(state);
+      return null;
+    }
   }
 
   // Calculate hunt total value: card value + hunts already in territory
@@ -139,22 +141,20 @@ export function handleHuntResponse(
     if (healingTotal >= pending.huntTotalValue) {
       averted = true;
       log(state, `${player.name} averts the Hunt with ${cardDisplayName(healingId)}${magiId ? " + Magi" : ""} (Healing ${healingTotal} ≥ Hunt ${pending.huntTotalValue}).`);
-
-      // Move healing card from hand to territory
-      const hIdx = player.hand.indexOf(healingId);
-      player.hand.splice(hIdx, 1);
-      player.territory.push(healingId);
-
-      // If magi was used, move it to territory as Magi-as-Healing
-      if (magiId) {
-        const mIdx = player.hand.indexOf(magiId);
-        player.hand.splice(mIdx, 1);
-        player.territory.push(magiId);
-        player.territoryMagiAsHealing.push(magiId);
-      }
     } else {
       log(state, `${player.name} tries to avert with ${cardDisplayName(healingId)}${magiId ? " + Magi" : ""} (Healing ${healingTotal} < Hunt ${pending.huntTotalValue}) — fails!`);
-      // Cards stay in hand, player must discard as normal
+    }
+
+    // Whether avert succeeded or failed, revealed cards go to territory
+    const hIdx = player.hand.indexOf(healingId);
+    player.hand.splice(hIdx, 1);
+    player.territory.push(healingId);
+
+    if (magiId) {
+      const mIdx = player.hand.indexOf(magiId);
+      player.hand.splice(mIdx, 1);
+      player.territory.push(magiId);
+      player.territoryMagiAsHealing.push(magiId);
     }
   }
 

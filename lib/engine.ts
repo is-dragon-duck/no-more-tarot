@@ -12,6 +12,7 @@ export function log(state: GameState, msg: string) {
 
 /**
  * Reshuffle discard pile into the deck if the deck is empty.
+ * Burns 1 card immediately after reshuffling.
  * Returns true if the deck now has cards, false if both are empty (game should end).
  */
 export function ensureDeck(state: GameState): boolean {
@@ -20,7 +21,12 @@ export function ensureDeck(state: GameState): boolean {
   state.deck = shuffle([...state.discard]);
   state.discard = [];
   log(state, "Discard pile shuffled into deck.");
-  return true;
+  // Burn 1 card immediately after reshuffle
+  if (state.deck.length > 0) {
+    state.burned.push(state.deck.pop()!);
+    log(state, "Burned 1 card after reshuffle.");
+  }
+  return state.deck.length > 0;
 }
 
 /**
@@ -226,9 +232,9 @@ export function triggerDeckExhaustion(state: GameState) {
       else if (type === "kingscommand") kcCount++;
     }
 
-    const score = stagCount + (3 * tithesInTerritory) + p.contributionsMade;
+    const score = stagCount + (3 * tithesInTerritory) + p.contributionsMade + p.ante + kcCount;
     scores.push({ player: p, score, tiebreak: [magiCount, healingCount, huntCount, kcCount] });
-    log(state, `${p.name}: ${stagCount} Stags + ${3 * tithesInTerritory} Tithe(${tithesInTerritory}×3) + ${p.contributionsMade} contributions = ${score}`);
+    log(state, `${p.name}: ${stagCount} Stags + ${3 * tithesInTerritory} Tithe(${tithesInTerritory}×3) + ${p.contributionsMade + p.ante} contributions(incl ante) + ${kcCount} KC = ${score}`);
   }
 
   scores.sort((a, b) => {

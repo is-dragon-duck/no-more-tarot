@@ -3,10 +3,10 @@ import { GameState, PlayerView, PublicPlayerInfo, PlayerState } from "./types";
 
 /**
  * Compute a player's hand limit.
- * Base 6, +1 per Magi in territory that is NOT used as healing.
+ * Base 5, +1 per Magi in territory that is NOT used as healing.
  */
 export function getHandLimit(player: PlayerState): number {
-  let limit = 6;
+  let limit = 5;
   for (const cardId of player.territory) {
     if (
       parseCardType(cardId) === "magi" &&
@@ -50,6 +50,23 @@ export function getStagPoints(player: PlayerState): number {
  */
 export function countTerritoryType(player: PlayerState, type: string): number {
   return player.territory.filter((c) => parseCardType(c) === type).length;
+}
+
+/**
+ * Compute a player's deck-out / "Crown" score.
+ * # Stags in territory + 3× Tithes in territory + contributions made (incl antes) + KC count.
+ */
+export function getCrownScore(player: PlayerState): number {
+  let stagCount = 0;
+  let tithes = 0;
+  let kc = 0;
+  for (const cardId of player.territory) {
+    const t = parseCardType(cardId);
+    if (t === "stag") stagCount++;
+    else if (t === "tithe") tithes++;
+    else if (t === "kingscommand") kc++;
+  }
+  return stagCount + (3 * tithes) + player.contributionsMade + player.ante + kc;
 }
 
 /**

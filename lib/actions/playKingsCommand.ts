@@ -104,6 +104,12 @@ export function handleKingCommandResponse(
 
     // Track the stag for collection (even if player was eliminated by atonement)
     pending.discardedStags.push(stagId);
+
+    // If atonement caused game to end (last standing), clean up
+    if (state.winner) {
+      state.pendingAction = null;
+      return null;
+    }
   }
 
   // Advance to next responder or collection phase

@@ -70,7 +70,7 @@ export function stagDiscardCost(stagValue: number): number {
   if (stagValue <= 3) return 1;
   if (stagValue <= 6) return 2;
   if (stagValue <= 9) return 4;
-  return 8;
+  return 6;
 }
 
 /** How much atonement (contribution) is required when discarding a Stag of this value */

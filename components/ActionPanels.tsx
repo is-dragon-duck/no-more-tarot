@@ -650,8 +650,8 @@ export function WinPanel({ view }: { view: PlayerView }) {
         else if (t === "hunt") hunts++;
         else if (t === "kingscommand") kc++;
       }
-      const score = stagCount + (3 * tithes) + p.contributionsMade;
-      return { name: p.name, isMe: p.isMe, score, stagCount, stagPoints, tithes, magis, healings, hunts, kc, contributions: p.contributionsMade };
+      const score = stagCount + (3 * tithes) + p.contributionsMade + p.ante + kc;
+      return { name: p.name, isMe: p.isMe, score, stagCount, stagPoints, tithes, magis, healings, hunts, kc, contributions: p.contributionsMade + p.ante };
     })
     .sort((a, b) => b.score - a.score);
 
@@ -687,6 +687,7 @@ export function WinPanel({ view }: { view: PlayerView }) {
                   <th className="text-center px-2 py-1.5" title="Stags in territory">♠</th>
                   <th className="text-center px-2 py-1.5" title="Tithes (×3 each)">◆</th>
                   <th className="text-center px-2 py-1.5" title="Contributions made">🪙</th>
+                  <th className="text-center px-2 py-1.5" title="King's Commands (+1 each)">♚</th>
                 </>
               )}
               {reason === "stag18" && (
@@ -714,6 +715,7 @@ export function WinPanel({ view }: { view: PlayerView }) {
                       {s.tithes > 0 ? `${s.tithes}(+${s.tithes * 3})` : "—"}
                     </td>
                     <td className="text-center px-2 py-1.5 text-stone-400">{s.contributions}</td>
+                    <td className="text-center px-2 py-1.5 text-orange-400">{s.kc > 0 ? s.kc : "—"}</td>
                   </>
                 )}
                 {reason === "stag18" && (

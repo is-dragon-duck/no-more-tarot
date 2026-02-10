@@ -154,10 +154,13 @@ export function handleTitheDiscard(
       remainingDiscardSeats: pending.remainingDiscardSeats.slice(1),
     };
   } else {
-    // All done — move to contribute phase for the tithe player
+    // All done — move to contribute phase for the tithe player (or finish if maxed)
     const tithePlayer = getPlayerBySeat(state, pending.tithePlayerSeat);
     if (tithePlayer.eliminated) {
       finishTithe(state, pending, false);
+    } else if (pending.contributionsSoFar >= 2) {
+      // Already contributed twice — done, no need to ask again
+      finishTithe(state, pending, true);
     } else {
       state.pendingAction = {
         type: "titheContribute",

@@ -547,6 +547,8 @@ function PlayerPanel({
   isCurrentTurn: boolean;
 }) {
   const ts = territoryStats(player.territory, player.territoryMagiAsHealing);
+  const handLimit = 5 + ts.magis; // base 5 + non-healing magi
+  const crownScore = ts.stagCount + (3 * ts.tithes) + player.contributionsMade + player.ante + ts.kc;
 
   return (
     <div
@@ -570,13 +572,19 @@ function PlayerPanel({
           {player.isMe && <span className="text-amber-400 text-xs">(you)</span>}
           {player.eliminated && <span className="text-red-400 text-xs">✗ out</span>}
         </div>
-        <div className="flex items-center gap-2.5 text-xs flex-shrink-0">
-          <span className={`font-semibold ${ts.stagPoints >= 15 ? "text-emerald-400" : ts.stagPoints >= 10 ? "text-emerald-500" : "text-stone-400"}`}>
-            ♠{ts.stagPoints}/18
+        <div className="flex items-center gap-3 text-xs flex-shrink-0">
+          <span className="text-stone-400" title={`${player.handCount} cards in hand, limit ${handLimit}`}>
+            ✋{player.handCount}/{handLimit}
           </span>
-          <span className="text-stone-500">✋{player.handCount}</span>
-          <span className="text-stone-500" title={`${player.contributionsMade} contributed, ${player.contributionsRemaining} remaining`}>
-            🪙{player.contributionsMade}/{player.contributionsMade + player.contributionsRemaining}
+          <span className="text-stone-400" title={`${player.contributionsRemaining} contribution tokens remaining`}>
+            🪙{player.contributionsRemaining}
+          </span>
+          <span className="text-amber-400" title={`Deck-out score: ${ts.stagCount} stags + ${ts.tithes * 3} tithe + ${player.contributionsMade + player.ante} contributed(incl ante) + ${ts.kc} KC = ${crownScore}`}>
+            👑{crownScore}
+          </span>
+          <span className={`font-semibold ${ts.stagPoints >= 15 ? "text-emerald-400" : ts.stagPoints >= 10 ? "text-emerald-500" : "text-stone-400"}`}
+            title={`${ts.stagPoints} Stag Points toward 18`}>
+            ♠{ts.stagPoints}/18
           </span>
         </div>
       </div>
@@ -610,7 +618,7 @@ function PlayerPanel({
             </span>
           )}
           {ts.kc > 0 && (
-            <span className="text-orange-400" title={`${ts.kc} King's Commands; Hunts discard/draw +${ts.kc}`}>
+            <span className="text-orange-400" title={`${ts.kc} King's Commands; Hunts discard/draw +${ts.kc}, +${ts.kc} deck-out score`}>
               ♚+{ts.kc} KC
             </span>
           )}

@@ -23,7 +23,7 @@ function tooltipText(cardId: string): string {
     case "stag": {
       const cost = stagDiscardCost(value);
       const atone = stagAtonementCost(value);
-      return `STAG ${value}\nKingdom action · Discard ${cost} card${cost > 1 ? "s" : ""} to play.\nWorth 1 toward the 18-Stag goal.\nIf discarded from hand: atone ${atone}\n(unless your Healing ≥ ${value}).`;
+      return `STAG ${value}\nKingdom action · Discard ${cost} card${cost > 1 ? "s" : ""} to play.\nWorth ${value} toward the 18-point goal.\nIf discarded from hand: atone ${atone}\n(unless your Healing ≥ ${value}).`;
     }
     case "hunt":
       return `HUNT ${value}\nTerritory action · Opponents discard 2 or\navert with Healing ≥ total Hunt value.\nYou draw 2 (−1 per averter).\nEach Hunt in territory adds +3 to value.`;

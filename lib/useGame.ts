@@ -8,8 +8,21 @@ export function useGame(gameId: string, playerId: string | null) {
   const [view, setView] = useState<PlayerView | null>(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [connected, setConnected] = useState(true);
   const viewRef = useRef(view);
   viewRef.current = view;
+
+  // Track previous "needs action" state for notification triggers
+  const prevNeedsAction = useRef(false);
+  const needsAction = view
+    ? (view.availableActions.length > 0) && view.phase !== "finished"
+    : false;
+
+  // Detect when it *becomes* your turn (transition from false → true)
+  const justBecameMyTurn = needsAction && !prevNeedsAction.current;
+  useEffect(() => {
+    prevNeedsAction.current = needsAction;
+  }, [needsAction]);
 
   const fetchState = useCallback(async () => {
     if (!playerId) return;
@@ -45,12 +58,25 @@ export function useGame(gameId: string, playerId: string | null) {
           fetchState();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setConnected(true);
+        } else if (status === "CLOSED" || status === "CHANNEL_ERROR") {
+          setConnected(false);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [gameId, fetchState]);
+
+  // Clear transient errors after 4 seconds
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(""), 4000);
+    return () => clearTimeout(t);
+  }, [error]);
 
   const submitAction = useCallback(
     async (body: Record<string, unknown>) => {
@@ -81,5 +107,5 @@ export function useGame(gameId: string, playerId: string | null) {
     [gameId, playerId, submitting]
   );
 
-  return { view, error, submitting, submitAction, fetchState };
+  return { view, error, submitting, submitAction, fetchState, connected, needsAction, justBecameMyTurn };
 }

@@ -443,6 +443,52 @@ export function MagiChoicePanel({
   );
 }
 
+export function MagiPlacePanel({
+  view,
+  selectedCards,
+  toggleCard,
+  clearSelection,
+  doAction,
+  submitting,
+  count,
+}: {
+  view: PlayerView;
+  selectedCards: string[];
+  toggleCard: (id: string) => void;
+  clearSelection: () => void;
+  doAction: (body: Record<string, unknown>) => Promise<void>;
+  submitting: boolean;
+  count: number;
+}) {
+  return (
+    <div>
+      <p className="text-sm text-stone-300 mb-2">
+        Magi — place {count} card{count !== 1 ? "s" : ""} on the bottom of the deck ({selectedCards.length}/{count}):
+      </p>
+      <p className="text-xs text-stone-500 mb-2">
+        These cards are not discarded — no atonement needed for Stags.
+      </p>
+      <div className="flex gap-2 items-center flex-wrap">
+        <button
+          onClick={() => {
+            doAction({ action: "magiPlaceCards", cardIds: selectedCards });
+            clearSelection();
+          }}
+          disabled={selectedCards.length !== count || submitting}
+          className="px-4 py-1.5 bg-violet-800 hover:bg-violet-700 disabled:opacity-40 rounded text-sm font-medium"
+        >
+          Place on Bottom ({selectedCards.length}/{count})
+        </button>
+        {selectedCards.length > 0 && (
+          <button onClick={clearSelection} className="px-3 py-1 text-xs text-stone-500">
+            Clear
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function TitheContributePanel({
   view,
   pending,
@@ -582,16 +628,126 @@ export function KingCommandCollectPanel({
 }
 
 export function WinPanel({ view }: { view: PlayerView }) {
-  // Winner info is in the log
-  const lastLog = view.log[view.log.length - 1]?.msg || "Game over!";
+  const winnerPlayer = view.players.find((p) => {
+    // Match by checking who the server declared winner
+    // Winner ID is in view.winner; match against player names via log
+    return false; // We'll use a different approach
+  });
+
+  const reason = view.winReason;
+
+  // Compute scores for all players (useful for deckOut, informative otherwise)
+  const scores = view.players
+    .filter((p) => !p.eliminated)
+    .map((p) => {
+      let stagCount = 0, stagPoints = 0, tithes = 0, magis = 0, healings = 0, hunts = 0, kc = 0;
+      for (const c of p.territory) {
+        const t = parseCardType(c);
+        if (t === "stag") { stagCount++; stagPoints += parseCardValue(c); }
+        else if (t === "tithe") tithes++;
+        else if (t === "magi") magis++;
+        else if (t === "healing") healings++;
+        else if (t === "hunt") hunts++;
+        else if (t === "kingscommand") kc++;
+      }
+      const score = stagCount + (3 * tithes) + p.contributionsMade;
+      return { name: p.name, isMe: p.isMe, score, stagCount, stagPoints, tithes, magis, healings, hunts, kc, contributions: p.contributionsMade };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  // Find winner name from the last log entries
+  const lastLogs = view.log.slice(-5);
+  const winLog = lastLogs.find((l) => l.msg.includes("wins"));
+  const winnerName = winLog?.msg?.match(/^(.+?) wins/)?.[1] || "Someone";
+  const iWon = scores.length > 0 && scores[0].isMe;
 
   return (
-    <div className="text-center py-4">
-      <p className="text-xl font-bold text-amber-400 mb-2">Game Over!</p>
-      <p className="text-stone-300">{lastLog}</p>
-      <a href="/" className="inline-block mt-4 px-4 py-2 bg-stone-700 hover:bg-stone-600 rounded text-sm">
-        Back to Home
-      </a>
+    <div className="py-4 max-w-md mx-auto">
+      {/* Headline */}
+      <div className="text-center mb-4">
+        <p className="text-2xl font-bold text-amber-400 mb-1">
+          {iWon ? "🎉 You Win!" : "Game Over!"}
+        </p>
+        <p className="text-stone-300 text-sm">
+          {reason === "stag18" && `${winnerName} reached 18 Stag Points!`}
+          {reason === "lastStanding" && `${winnerName} is the last player standing!`}
+          {reason === "deckOut" && "The deck ran out — final scores:"}
+        </p>
+      </div>
+
+      {/* Score table (always shown, most useful for deckOut) */}
+      <div className="bg-stone-800/60 rounded-lg overflow-hidden mb-4">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-stone-500 text-xs border-b border-stone-700">
+              <th className="text-left px-3 py-1.5">#</th>
+              <th className="text-left px-3 py-1.5">Player</th>
+              {reason === "deckOut" && (
+                <>
+                  <th className="text-center px-2 py-1.5" title="Stags in territory">♠</th>
+                  <th className="text-center px-2 py-1.5" title="Tithes (×3 each)">◆</th>
+                  <th className="text-center px-2 py-1.5" title="Contributions made">🪙</th>
+                </>
+              )}
+              {reason === "stag18" && (
+                <th className="text-center px-2 py-1.5">♠ Points</th>
+              )}
+              <th className="text-right px-3 py-1.5">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            {scores.map((s, i) => (
+              <tr
+                key={s.name}
+                className={`border-b border-stone-700/50 ${i === 0 ? "bg-amber-900/20" : ""} ${s.isMe ? "font-medium" : ""}`}
+              >
+                <td className="px-3 py-1.5 text-stone-500">{i + 1}</td>
+                <td className="px-3 py-1.5">
+                  {s.name}
+                  {s.isMe && <span className="text-amber-400 text-xs ml-1">(you)</span>}
+                  {i === 0 && <span className="text-amber-400 text-xs ml-1">👑</span>}
+                </td>
+                {reason === "deckOut" && (
+                  <>
+                    <td className="text-center px-2 py-1.5 text-emerald-400">{s.stagCount}</td>
+                    <td className="text-center px-2 py-1.5 text-amber-400">
+                      {s.tithes > 0 ? `${s.tithes}(+${s.tithes * 3})` : "—"}
+                    </td>
+                    <td className="text-center px-2 py-1.5 text-stone-400">{s.contributions}</td>
+                  </>
+                )}
+                {reason === "stag18" && (
+                  <td className="text-center px-2 py-1.5 text-emerald-400">{s.stagPoints}</td>
+                )}
+                <td className="text-right px-3 py-1.5 font-bold text-stone-200">{s.score}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Eliminated players */}
+      {view.players.some((p) => p.eliminated) && (
+        <div className="text-xs text-stone-600 mb-4 text-center">
+          Eliminated: {view.players.filter((p) => p.eliminated).map((p) => p.name).join(", ")}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-3 justify-center">
+        <a
+          href="/"
+          className="px-5 py-2 bg-amber-700 hover:bg-amber-600 rounded font-medium text-sm"
+        >
+          Play Again
+        </a>
+        <a
+          href="/"
+          className="px-5 py-2 bg-stone-700 hover:bg-stone-600 rounded text-sm"
+        >
+          Home
+        </a>
+      </div>
     </div>
   );
 }

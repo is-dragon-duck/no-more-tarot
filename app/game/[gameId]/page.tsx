@@ -14,6 +14,7 @@ import {
   HuntResponsePanel,
   DiscardPanel,
   MagiChoicePanel,
+  MagiPlacePanel,
   TitheContributePanel,
   KingCommandResponsePanel,
   KingCommandCollectPanel,
@@ -101,7 +102,7 @@ function GameBoard({
   let actionPanel: React.ReactNode = null;
 
   if (isFinished) {
-    actionPanel = <WinPanel view={view} />;
+    // WinPanel rendered directly in main content, not in action bar
   } else if (actions.length === 0 && !pending) {
     actionPanel = (
       <div className="text-stone-400 text-sm py-2">
@@ -176,18 +177,14 @@ function GameBoard({
   } else if (actions.includes("magiPlaceCards")) {
     const count = pending?.type === "magiPlaceCards" ? pending.placeBottomCount : 1;
     actionPanel = (
-      <DiscardPanel
+      <MagiPlacePanel
         view={view}
         selectedCards={selectedCards}
         toggleCard={toggleCard}
         clearSelection={clearSelection}
-        doAction={async (body) => {
-          await doAction({ action: "magiPlaceCards", cardIds: body.cardIds });
-        }}
+        doAction={doAction}
         submitting={submitting}
         count={count}
-        actionName="magiPlaceCards"
-        reason="Place on bottom of deck"
       />
     );
   } else if (actions.includes("titheContribute")) {
@@ -227,7 +224,7 @@ function GameBoard({
   }
 
   return (
-    <main className="min-h-screen p-3 max-w-5xl mx-auto pb-64">
+    <main className={`min-h-screen p-3 max-w-5xl mx-auto ${isFinished ? "pb-8" : "pb-64"}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h1 className="text-lg font-bold text-stone-300">Game {view.gameId}</h1>
@@ -314,10 +311,19 @@ function GameBoard({
       {/* Error */}
       {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
 
-      {/* Action panel (sticky at bottom) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-stone-900/95 border-t border-stone-700 p-3 backdrop-blur">
-        <div className="max-w-5xl mx-auto">{actionPanel}</div>
-      </div>
+      {/* Win Panel (full width, in main area) */}
+      {isFinished && (
+        <section className="mb-3">
+          <WinPanel view={view} />
+        </section>
+      )}
+
+      {/* Action panel (sticky at bottom, hidden when game over) */}
+      {!isFinished && (
+        <div className="fixed bottom-0 left-0 right-0 bg-stone-900/95 border-t border-stone-700 p-3 backdrop-blur">
+          <div className="max-w-5xl mx-auto">{actionPanel}</div>
+        </div>
+      )}
 
       {/* Game Log */}
       <section className="mb-3">
@@ -387,8 +393,8 @@ function PlayerPanel({
             ♠{ts.stagPoints}/18
           </span>
           <span className="text-stone-500">✋{player.handCount}</span>
-          <span className="text-stone-500" title={`${player.contributionsMade} spent`}>
-            🪙{player.contributionsRemaining}
+          <span className="text-stone-500" title={`${player.contributionsMade} contributed, ${player.contributionsRemaining} remaining`}>
+            🪙{player.contributionsMade}/{player.contributionsMade + player.contributionsRemaining}
           </span>
         </div>
       </div>

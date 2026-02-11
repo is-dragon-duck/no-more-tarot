@@ -158,7 +158,7 @@ function HealingRules() {
     <>
       <h3 className="font-bold text-sky-400">♥ Healing (1–12)</h3>
       <p>Healing is defense. Play as a Territory action — no on-play effect, just goes into territory.</p>
-      <p><span className="text-stone-100 font-medium">Averting Hunts:</span> When an opponent plays a Hunt, reveal a Healing card from your hand. Its total value = card value + 1 per Healing in your territory + 1 per Magi-as-Healing in territory. Optionally reveal a Magi for +6. If total ≥ Hunt value, you avert (no discard).</p>
+      <p><span className="text-stone-100 font-medium">Averting Hunts:</span> When an opponent plays a Hunt, reveal a Healing card from your hand. Its total value = card value + 1 per Healing in your territory + 3 per Magi-as-Healing in territory. Optionally reveal a Magi for +6. If total ≥ Hunt value, you avert (no discard).</p>
       <p>Revealed Healing and Magi go to your territory for future defense.</p>
       <p><span className="text-stone-100 font-medium">Stag Protection:</span> If your territory&apos;s total Healing value ≥ a Stag&apos;s value, you don&apos;t atone when discarding that Stag.</p>
     </>
@@ -172,7 +172,7 @@ function MagiRules() {
       <p>Magi are versatile utility cards. Play as a Territory action.</p>
       <p><span className="text-stone-100 font-medium">Split 6 effects</span> between: draw from top of deck, draw from bottom of deck, and place cards from hand onto bottom of deck. Execute in that order.</p>
       <p>Magi goes to your territory and gives <span className="text-violet-300">+1 hand size</span>.</p>
-      <p><span className="text-stone-100 font-medium">Healing alternative:</span> Instead of playing normally, reveal a Magi alongside a Healing card when an opponent Hunts to get +6 to your Healing total. The Magi goes to territory but counts as +1 Healing (not +1 hand size).</p>
+      <p><span className="text-stone-100 font-medium">Healing alternative:</span> Instead of playing normally, reveal a Magi alongside a Healing card when an opponent Hunts to get +6 to your Healing total. The Magi goes to territory but counts as +3 Healing (not +1 hand size).</p>
     </>
   );
 }

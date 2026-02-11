@@ -532,7 +532,7 @@ function territoryStats(territory: string[], magiAsHealing: string[]) {
     if (t === "stag") { stagCount++; stagPoints += parseCardValue(c); }
     else if (t === "hunt") hunts++;
     else if (t === "healing") healings++;
-    else if (t === "magi") { if (magiHealSet.has(c)) healings++; else magis++; }
+    else if (t === "magi") { if (magiHealSet.has(c)) healings += 3; else magis++; }
     else if (t === "tithe") tithes++;
     else if (t === "kingscommand") kc++;
   }

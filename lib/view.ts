@@ -27,7 +27,7 @@ export function getTerritoryHealingValue(player: PlayerState): number {
   for (const cardId of player.territory) {
     if (parseCardType(cardId) === "healing") total += 1;
   }
-  total += player.territoryMagiAsHealing.length;
+  total += 3 * player.territoryMagiAsHealing.length;
   return total;
 }
 

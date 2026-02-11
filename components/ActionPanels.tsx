@@ -650,7 +650,7 @@ export function WinPanel({ view }: { view: PlayerView }) {
         else if (t === "hunt") hunts++;
         else if (t === "kingscommand") kc++;
       }
-      const score = stagCount + (3 * tithes) + p.contributionsMade + p.ante + kc;
+      const score = stagCount + (3 * tithes) + p.contributionsMade + kc;
       return { name: p.name, isMe: p.isMe, score, stagCount, stagPoints, tithes, magis, healings, hunts, kc, contributions: p.contributionsMade + p.ante };
     })
     .sort((a, b) => b.score - a.score);
